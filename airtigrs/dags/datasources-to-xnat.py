@@ -64,7 +64,9 @@ def make_dag(dag_id, study, config, default_args):
             config.get_key('XnatSourceArchive', site=site)
         except datman.config.UndefinedSetting:
             pass
-
+        else:
+            fetch_xnat = True
+                
     if not fetch_xnat and not sftp_config:
         return
 
