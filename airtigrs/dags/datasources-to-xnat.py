@@ -34,32 +34,34 @@ def make_dag(dag_id, study, config, default_args):
 
     dag = DAG(dag_id,
               default_args=default_args,
-              description='Transfer data from SFTP servers and push to XNAT',
+              description='Ingest from external SFTP and XNAT servers'
+              ' and push to XNAT',
               schedule_interval=timedelta(days=1),
-              tags=['sftp', 'source-pull', study],
+              tags=['sftp', 'xnat', 'ingest', study],
               start_date=days_ago(1))
 
     dag.doc_md = """
-    This DAG pulls SFTP data from remote MR-servers
-    and uploads them to XNAT
+    This DAG ingests data from external datasources (SFTP, XNAT)
+    then uploads the files to an XNAT instance after mangling
+    names to match the desired convention
     """
 
     # Check if XNAT or SFTP is configured at all for study
     sftp_config = []
     fetch_xnat = False
-    for s in config.get_sites():
-        conn_id = f"{p}_{s}_sftp"
+    for site in config.get_sites():
+        conn_id = f"{study}_{site}_sftp"
         try:
             Connection.get_connection_from_secrets(conn_id)
         except AirflowNotFoundException:
             pass
         else:
-            sftp_config.append((s, conn_id))
+            sftp_config.append((site, conn_id))
 
         try:
-            config.get_key('XnatSourceCredential', site=s)
-            config.get_key('XnatSource', site=s)
-            config.get_key('XnatSourceArchive', site=s)
+            config.get_key('XnatSourceCredential', site=site)
+            config.get_key('XnatSource', site=site)
+            config.get_key('XnatSourceArchive', site=site)
         except datman.config.UndefinedSetting:
             pass
 
@@ -98,16 +100,12 @@ def make_dag(dag_id, study, config, default_args):
     return dag
 
 
-# Get all Datman studies to generate DAGs for
 config = datman.config.config()
 projects = config.get_key("Projects")
 
-# Create DAGs only for studies with an MrUser defined
-# Meaning that SFTP is configured
-for p in projects:
-    config.set_study(p)
-    dag_id = f"sftp_to_xnat_{p}"
-    dag = make_dag(dag_id, p, config, default_args)
+for project in projects:
+    config.set_study(project)
+    dag_id = f"ingest_external_mri_{project}"
+    dag = make_dag(dag_id, project, config, default_args)
     if dag is not None:
-        print(dag_id)
-        globals()[dag_id] = make_dag(dag_id, p, config, default_args)
+        globals()[dag_id] = dag
