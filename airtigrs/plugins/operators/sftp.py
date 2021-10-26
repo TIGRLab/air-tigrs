@@ -1,9 +1,10 @@
 from typing import Optional
 
-import datetime
 from airflow.providers.sftp.hooks.sftp import SFTPHook
 from airflow.models.baseoperator import BaseOperator
 from airflow.exceptions import AirflowSkipException
+
+from airtigrs.utils import as_datetime
 
 import os
 
@@ -41,23 +42,7 @@ class SFTPFetchOperator(BaseOperator):
         self.local_path = local_path
         self.hook: Optional[SFTPHook] = None
 
-    def execute(self, context: dict) -> bool:
-        self.hook = SFTPHook(self.sftp_conn_id)
-
-        # Process remote_path from extras
-        if self.remote_path is None:
-            extras = self.hook.get_connection(self.sftp_conn_id).extra_dejson
-            try:
-                self.remote_path = extras['remote_path']
-            except KeyError:
-                self.log.error(
-                    "remote_path not provided to SFTP config! "
-                    "Set in Airflow MetaDB connections or provide on "
-                    "instance construction!")
-                raise
-
-        self.log.info(
-            f'Checking {self.remote_path} for files not in {self.local_path}')
+    def _get_difference_files(self):
 
         try:
             remote_files = sorted(self.hook.list_directory(self.remote_path))
@@ -75,12 +60,13 @@ class SFTPFetchOperator(BaseOperator):
         # Check files that need updating
         pull_files = []
         matched = [r for r in remote_files if r in local_files]
+        self.log.info(f'Checking {self.remote_path} that need updating...')
         for m in matched:
             remote = os.path.join(self.remote_path, m)
             local = os.path.join(self.local_path, m)
 
             remote_mtime = self.hook.get_mod_time(remote)
-            local_mtime = _as_datetime(os.path.getmtime(local))
+            local_mtime = as_datetime(os.path.getmtime(local))
             self.log.info(f"Local: {local_mtime}")
             self.log.info(f"Remote: {remote_mtime}")
             if remote_mtime != local_mtime:
@@ -89,6 +75,8 @@ class SFTPFetchOperator(BaseOperator):
             self.log.info(f"Found {len(matched)} files needing to be updated!")
 
         # Check for missing files
+        self.log.info(
+            f'Checking {self.remote_path} for files not in {self.local_path}')
         new_files = [r for r in remote_files if r not in local_files]
         if new_files:
             self.log.info(f"Found {len(new_files)} new files!")
@@ -97,6 +85,26 @@ class SFTPFetchOperator(BaseOperator):
         if not pull_files:
             self.log.info("No files need updating...")
             raise AirflowSkipException
+
+        return pull_files
+
+    def execute(self, context: dict) -> bool:
+
+        self.hook = SFTPHook(self.sftp_conn_id)
+
+        # Process remote_path from extras
+        if self.remote_path is None:
+            extras = self.hook.get_connection(self.sftp_conn_id).extra_dejson
+            try:
+                self.remote_path = extras['remote_path']
+            except KeyError:
+                self.log.error(
+                    "remote_path not provided to SFTP config! "
+                    "Set in Airflow MetaDB connections or provide on "
+                    "instance construction!")
+                raise
+
+        pull_files = self._get_difference_files()
 
         # If files need to be pulled, initiate
         with self.hook.get_conn() as sftp:
@@ -108,5 +116,3 @@ class SFTPFetchOperator(BaseOperator):
                              preserve_mtime=True)
 
 
-def _as_datetime(mtime):
-    return datetime.datetime.fromtimestamp(mtime).strftime('%Y%m%d%H%M%S')

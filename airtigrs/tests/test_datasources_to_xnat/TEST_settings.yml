@@ -1,0 +1,16 @@
+###############################
+#       DEV Project Settings
+###############################
+
+ProjectDir:             DEV
+StudyTag:               DEV01
+FullName:               Development Study
+PrimaryContact:         "jjeyachandra" 
+Description:            This is minimal study setup file
+
+UsesRedcap: False
+
+Sites:
+    TESTA:
+        XnatArchive: DEV01_STA
+        UsesTechNotes: True
