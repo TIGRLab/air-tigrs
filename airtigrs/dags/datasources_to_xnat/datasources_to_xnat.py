@@ -12,6 +12,7 @@ from airtigrs.plugins.operators.sftp import SFTPFetchOperator
 from airflow.models.connection import Connection
 from airflow.exceptions import AirflowNotFoundException
 import datman.config
+from airtigrs.dags.datasources_to_xnat import utils
 
 default_args = {
     'owner': 'airflow',
@@ -32,6 +33,7 @@ def make_dag(dag_id, study, config, default_args):
     SFTP is configured. If not returns None
     '''
 
+    config.set_study(study)
     dag = DAG(dag_id,
               default_args=default_args,
               description='Ingest from external SFTP and XNAT servers'
@@ -51,22 +53,12 @@ def make_dag(dag_id, study, config, default_args):
     fetch_xnat = False
     for site in config.get_sites():
         conn_id = f"{study}_{site}_sftp"
-        try:
-            Connection.get_connection_from_secrets(conn_id)
-        except AirflowNotFoundException:
-            pass
-        else:
+        if utils.conn_id_exists(conn_id):
             sftp_config.append((site, conn_id))
 
-        try:
-            config.get_key('XnatSourceCredential', site=site)
-            config.get_key('XnatSource', site=site)
-            config.get_key('XnatSourceArchive', site=site)
-        except datman.config.UndefinedSetting:
-            pass
-        else:
+        if utils.external_xnat_is_configured(config, site):
             fetch_xnat = True
-                
+
     if not fetch_xnat and not sftp_config:
         return
 
@@ -106,7 +98,6 @@ config = datman.config.config()
 projects = config.get_key("Projects")
 
 for project in projects:
-    config.set_study(project)
     dag_id = f"ingest_external_mri_{project}"
     dag = make_dag(dag_id, project, config, default_args)
     if dag is not None:
