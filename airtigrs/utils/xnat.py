@@ -1,20 +1,7 @@
 '''
-Utility functions for datasources_to_xnat.py
+Utilities for working with XNAT connections
 '''
-
-from airflow.models.connection import Connection
-from airflow.exceptions import AirflowNotFoundException
 from datman.config import UndefinedSetting
-
-
-def conn_id_exists(conn_id):
-    try:
-        Connection.get_connection_from_secrets(conn_id)
-    except AirflowNotFoundException:
-        return False
-    else:
-        return True
-
 
 def external_xnat_is_configured(config, site):
     try:

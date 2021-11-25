@@ -4,7 +4,7 @@ from airflow.providers.sftp.hooks.sftp import SFTPHook
 from airflow.models.baseoperator import BaseOperator
 from airflow.exceptions import AirflowSkipException
 
-from airtigrs.utils import as_datetime
+from airtigrs.utils.dates import as_datetime
 
 import os
 

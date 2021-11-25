@@ -5,7 +5,7 @@ import os
 import pysftp
 
 from airtigrs.plugins.operators.sftp import SFTPFetchOperator
-from airtigrs.utils import as_datetime
+from airtigrs.utils.dates import as_datetime
 from airflow.models import Connection
 
 from airflow.exceptions import AirflowSkipException
