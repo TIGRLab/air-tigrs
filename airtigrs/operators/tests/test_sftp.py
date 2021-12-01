@@ -1,6 +1,4 @@
 import pytest
-import datetime
-import pytz
 import os
 import pysftp
 
@@ -10,8 +8,6 @@ from airflow.models import Connection
 
 from airflow.exceptions import AirflowSkipException
 
-DATA_INTERVAL_START = datetime.datetime(2021, 9, 13, tzinfo=pytz.UTC)
-DATA_INTERVAL_END = DATA_INTERVAL_START + datetime.timedelta(days=1)
 MOCK_SFTP_CONN_ID = "mock_sftp"
 MOCK_SFTP_TASK_ID = "mock_sftp_id"
 MOCK_SFTP_DAG_ID = "mock_sftp_task"
