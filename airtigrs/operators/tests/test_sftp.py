@@ -2,7 +2,7 @@ import pytest
 import os
 import pysftp
 
-from airtigrs.plugins.operators.sftp import SFTPFetchOperator
+from airtigrs.operators.sftp import SFTPFetchOperator
 from airtigrs.utils.dates import as_datetime
 from airflow.models import Connection
 
