@@ -1,0 +1,862 @@
+### configuration of all run.sh scripts in TIGR lab server
+---
+XnatServer: http://somexnatserver
+XnatConvention: KCNI
+XnatPort: 80
+LogServer: someserver
+ServerLogDir: "somelogdir"
+
+Projects:
+  TEST: TEST_settings.yml
+
+SystemSettings:
+  test:
+    DatmanProjectsDir: "projectsdir/"
+    DatmanAssetsDir: "assetsdir/"
+    ConfigDir: "tests/test_datasources_to_xnat/"
+
+Paths:
+  # paths defined here are relative to the study specific folder
+  meta: metadata/
+  data: data/
+  dcm:  data/dcm/
+  nii:  data/nii/
+  bids: data/bids/
+  mnc:  data/mnc/
+  nrrd: data/nrrd/
+  dicom: data/dicom/
+  resources: data/RESOURCES/
+  jsons: data/modified_jsons/
+  qc:   qc/
+  std:  metadata/standards/
+  log:  logs/
+  zips: data/zips/
+  dtiprep: pipelines/dtiprep/
+  fmri: pipelines/fmri/
+  hcp:  pipelines/hcp/
+  hcp_fs: pipelines/hcp_freesurfer/
+  freesurfer: pipelines/freesurfer/
+  unring: pipelines/unring/
+  task: task/
+  feenics: pipelines/feenics/
+  fmriprep: pipelines/bids_apps/fmriprep
+  ciftify: pipelines/bids_apps/ciftify
+  dmriprep: pipelines/bids_apps/dmriprep
+  mriqc: pipelines/bids_apps/mriqc
+
+ExportSettings:
+        T1:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: anat,
+                        Bids: {
+                                class: anat,
+                                modality_label: T1w
+                        }
+                }
+        T1-NORM:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: anat,
+                        Bids: {
+                                class: anat,
+                                modality_label: T1w,
+                                acq: prescannorm
+                        }
+
+                }
+        T2:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: anat,
+                        Bids: {
+                                class: anat,
+                                modality_label: T2w
+                        }
+                }
+
+        T2-NORM:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: anat,
+                        Bids: {
+                                class: anat,
+                                modality_label: T2w,
+                                acq: prescannorm
+                        }
+
+                }
+
+        T2-w:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: anat,
+                        Bids: {
+                                class: anat,
+                                modality_label: T2w,
+                                acq: PDFSET2,
+                                over: {
+                                        label: modality_label,
+                                        value: T2w
+                                }
+
+                        }
+                }
+        PD:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: anat
+                }
+        FLAIR:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: anat,
+                        Bids: {
+                                class: anat,
+                                modality_label: FLAIR
+                        }
+                }
+        RST:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: fmri,
+                        Bids: {
+                            class: func,
+                            contrast_label: bold,
+                            task: rest,
+                            alt: [
+                              {
+                                template: "pipelines/bold2fmap//**BOLD2FMAP-PA*.nii.gz",
+                                type: FMRI-DPA,
+                                inherit: { acq: boldref }
+                              },
+                              {
+                                template: "pipelines/bold2fmap//**BOLD2FMAP-AP*.nii.gz",
+                                type: FMRI-DAP,
+                                inherit: { acq: boldref }
+                              },
+                              {
+                                type: RST
+                              }
+                            ]
+                        }
+                }
+        RST-ABCD:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: fmri,
+                        Bids: {
+                            class: func,
+                            contrast_label: bold,
+                            task: rest,
+                            alt: [
+                              {
+                                template: "pipelines/bold2fmap//**BOLD2FMAP-PA*.nii.gz",
+                                type: FMRI-DPA,
+                                inherit: { acq: boldref }
+                              },
+                              {
+                                template: "pipelines/bold2fmap//**BOLD2FMAP-AP*.nii.gz",
+                                type: FMRI-DAP,
+                                inherit: { acq: boldref }
+                              },
+                              {
+                                type: RST
+                              }
+                            ]
+                        }
+                }
+        OBS:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: fmri,
+                        Bids: {
+                                class: func,
+                                contrast_label: bold,
+                                task: obs
+                        }
+                }
+        IMI:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: fmri,
+                        Bids: {
+                                class: func,
+                                contrast_label: bold,
+                                task: imi
+                        }
+                }
+        NBK:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: fmri,
+                        Bids: {
+                                class: func,
+                                contrast_label: bold,
+                                task: nbk
+                        }
+                }
+        EMP:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: fmri,
+                        Bids: {
+                            class: func,
+                            contrast_label: bold,
+                            task: emp,
+                            alt: [
+                              {
+                                template: "pipelines/bold2fmap//**BOLD2FMAP-PA*.nii.gz",
+                                type: FMRI-DPA,
+                                inherit: { acq: boldref }
+                              },
+                              {
+                                template: "pipelines/bold2fmap//**BOLD2FMAP-AP*.nii.gz",
+                                type: FMRI-DAP,
+                                inherit: { acq: boldref }
+                              },
+                              {
+                                type: EMP
+                              }
+                            ]
+                        }
+                }
+        GNG:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: fmri,
+                        Bids: {
+                                class: func,
+                                contrast_label: bold,
+                                task: gng
+                        }
+                }
+        TMS-FMRI:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: fmri,
+                        Bids: {
+                                class: func,
+                                contrast_label: bold,
+                                task: tms,
+                                alt: [{
+                                        template: "pipelines/tmsfmri//t*TMS-FMRI**.nii.gz",
+                                        type: CLEANED_TMS-FMRI
+                                     }]
+                              }
+                }
+        SPRL-COMB:
+                {
+                        Formats: ['nii'],
+                        QcType: fmri,
+                        Bids: {
+                                class: func,
+                                contrast_label: bold,
+                                task: rest,
+                                acq: sprlcombined,
+                                alt: [{
+                                        template: "pipelines/feenics//.sprlCOMBINED.denoised.nii.gz",
+                                        type: FEENICS_SPRL
+
+                                }]
+                        }
+                }
+        SPRL-IN:
+                {
+                        Formats: ['nii'],
+                        QcType: fmri,
+                }
+        SPRL-OUT:
+                {
+                        Formats: ['nii'],
+                        QcType: fmri,
+                }
+        VN-SPRL-COMB:
+                {
+                        Formats: ['nii'],
+                        QcType: fmri,
+                        Bids: {
+                                class: func,
+                                contrast_label: bold,
+                                task: rest,
+                                acq: sprlcombined
+                        }
+                }
+        VN:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: fmri,
+                        Bids: {
+                                class: func,
+                                contrast_label: bold,
+                                task: rest
+                        }
+                }
+        SID:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: fmri,
+                        Bids: {
+                                class: func,
+                                contrast_label: bold,
+                                task: sid
+                        }
+                }
+        MID:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: fmri,
+                        Bids: {
+                                class: func,
+                                contrast_label: bold,
+                                task: mid
+                        }
+                }
+        TRG:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: fmri,
+                        Bids: {
+                                class: func,
+                                contrast_label: bold,
+                                task: trg
+                        }
+                }
+        DTI:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: dti,
+                        Bids: {
+                                class: dwi,
+                                modality_label: dwi
+                        }
+                }
+        DTI21:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: dti,
+                        Bids: {
+                                class: dwi,
+                                modality_label: dwi,
+                                acq: singleshelldir21b1000res20
+                        }
+                }
+        DTI22:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: dti,
+                        Bids: {
+                                class: dwi,
+                                modality_label: dwi,
+                                acq: singleshelldir22b1000res20
+                        }
+                }
+        DTI23:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: dti,
+                        Bids: {
+                                class: dwi,
+                                modality_label: dwi,
+                                acq: singleshelldir23b1000res20
+                        }
+                }
+        DTI60-29-1000:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: dti,
+                        Bids: {
+                                class: dwi,
+                                modality_label: dwi,
+                                acq: singleshelldir60b1000res29
+                        }
+                }
+        DTI60-20-1000:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: dti,
+                        Bids: {
+                                class: dwi,
+                                modality_label: dwi,
+                                acq: singleshelldir60b1000res20
+                        }
+                }
+        DTI60-1000-20:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: dti,
+                        Bids: {
+                                class: dwi,
+                                modality_label: dwi,
+                                acq: singleshelldir60b1000res20
+                        }
+                }
+        DTI60-1000-29:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: dti,
+                        Bids: {
+                                class: dwi,
+                                modality_label: dwi,
+                                acq: singleshelldir60b1000res29
+                        }
+                }
+        DTI60-1000:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: dti, QcPha: qa_dti,
+                        Bids: {
+                                class: dwi,
+                                modality_label: dwi,
+                                acq: singleshelldir60b1000
+                        }
+                }
+        DTI33-1000:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: dti,
+                        Bids: {
+                                class: dwi,
+                                modality_label: dwi,
+                                acq: multishelldir30b1000
+                        }
+                }
+        DTI33-3000:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: dti,
+                        Bids: {
+                                class: dwi,
+                                modality_label: dwi,
+                                acq: multishelldir30b3000
+                        }
+                }
+        DTI33-4500:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: dti,
+                        Bids: {
+                                class: dwi,
+                                modality_label: dwi,
+                                acq: multishelldir30b4500
+                        }
+                }
+        DTI23-1000:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: dti,
+                        Bids: {
+                                class: dwi,
+                                modality_label: dwi,
+                                acq: singleshelldir23b1000
+                        }
+                }
+        ECHO1:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore,
+                        Bids: {
+                                class: fmap,
+                                modality_label: epi,
+                                intended_for: [func,dwi],
+                                echo: 1,
+                                alt: [{
+                                        template: "pipelines/fieldmaps//*FIELDMAP_*nii.gz",
+                                        type: FIELDMAP
+                                },
+                                {
+                                        template: "pipelines/fieldmaps//*MAG*_*nii.gz",
+                                        type: MAGNITUDE
+
+                                }]
+                        }
+                }
+        ECHO2:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore,
+                }
+        MAG1:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore,
+                        Bids: {
+                                class: fmap,
+                                modality_label: magnitude1,
+                                pair: {
+                                        label: modality_label,
+                                        with: [magnitude2,phase1,phase2,phasediff]
+                                },
+                                intended_for: [func,dwi]
+                        }
+                }
+        MAG2:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore,
+                        Bids: {
+                                class: fmap,
+                                modality_label: magnitude2,
+                                pair: {
+                                        label: modality_label,
+                                        with: [magnitude1,phase1,phase2,phasediff]
+                                },
+                                intended_for: [func,dwi]
+                        }
+                }
+        PHASE1:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore,
+                        Bids: {
+                                class: fmap,
+                                modality_label: phase1,
+                                pair: {
+                                        label: modality_label,
+                                        with: [magnitude1,magnitude2,phase2]
+                                },
+                                intended_for: [func,dwi]
+                        }
+                }
+        PHASE2:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore,
+                        Bids: {
+                                class: fmap,
+                                modality_label: phase2,
+                                pair: {
+                                        label: modality_label,
+                                        with: [magnitude1,magnitude2,phase1]
+                                },
+                                intended_for: [func,dwi]
+                        }
+                }
+        PHASEDIFF:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore,
+                        Bids: {
+                                class: fmap,
+                                modality_label: phasediff,
+                                pair: {
+                                        label: modality_label,
+                                        with: [magnitude1,magnitude2]
+                                },
+                                intended_for: [func,dwi]
+                        }
+                }
+        MRS-DLPFC:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore
+                }
+        MRS-sgACC:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore
+                }
+        MRS:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore
+                }
+        ASL:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore
+                }
+        CBF:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore
+                }
+        CAL-SBREF:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: func
+                }
+        SBREF:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: anat,
+                        Bids: {
+                            class: func,
+                            contrast_label: sbref,
+                            is_ref: true,
+                            alt: [
+                              {
+                                template: "pipelines/bold2fmap//**SBREF2FMAP-PA*.nii.gz",
+                                type: FMRI-DPA,
+                                inherit: { acq: sbref }
+                              },
+                              {
+                                template: "pipelines/bold2fmap//**SBREF2FMAP-AP*.nii.gz",
+                                type: FMRI-DAP,
+                                inherit: { acq: sbref }
+                              },
+                              {
+                                type: SBREF
+                              }
+                            ]
+                        }
+                }
+        DMRI-DAP:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: anat,
+                        Bids: {
+                                class: fmap,
+                                modality_label: epi,
+                                dir: AP,
+                                acq: dwitopup,
+                                intended_for: [dwi],
+                                pair: {
+                                        label: dir,
+                                        with: [PA]
+                                }
+                        }
+                }
+        DMRI-DPA:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: anat,
+                        Bids: {
+                                class: fmap,
+                                modality_label: epi,
+                                dir: PA,
+                                acq: dwitopup,
+                                intended_for: [dwi],
+                                pair: {
+                                        label: dir,
+                                        with: [AP]
+                                }
+                        }
+                }
+        FMRI-DAP:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: anat,
+                        Bids: {
+                                class: fmap,
+                                modality_label: epi,
+                                dir: AP,
+                                acq: functopup,
+                                intended_for: [func],
+                                pair: {
+                                        label: dir,
+                                        with: [PA]
+                                }
+                        }
+                }
+        FMRI-DPA:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: anat,
+                        Bids: {
+                                class: fmap,
+                                modality_label: epi,
+                                dir: PA,
+                                acq: functopup,
+                                intended_for: [func],
+                                pair: {
+                                        label: dir,
+                                        with: [AP]
+                                }
+                        }
+                }
+        SPLIT-FMAP:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: anat
+                }
+        DTI-ABCD:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: dti,
+                        Bids: {
+                                class: dwi,
+                                modality_label: dwi,
+                                acq: multishelldir96
+                        }
+                }
+        FACES:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: fmri,
+                        Bids: {
+                                class: func,
+                                contrast_label: bold,
+                                task: faces
+                              }
+                }
+        GF:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore
+                }
+        SNRMAP:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore
+                }
+        N-COV:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore
+                }
+        ABCD-QAfMRI:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore,
+                        QcPha: abcd_fmri
+                }
+        ABCD-QAdMRI:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore,
+                        QcPha: qa_dti
+                }
+        FBN-QAfMRI:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: fmri
+                }
+        DTI98:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: dti,
+                        Bids: {
+                                class: dwi,
+                                modality_label: dwi,
+                                acq: multishelldir92
+                        }
+                }
+        BIAS-BC:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore
+                }
+        BIAS-64CH:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore
+                }
+        REST-AP:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: fmri,
+                        Bids: {
+                                class: func,
+                                task: rest,
+                                contrast_label: bold,
+                                dir: AP
+                        }
+                }
+        REST-PA:
+                {
+                        Formats: ['nii', 'dcm'],
+                        QcType: fmri,
+                        Bids: {
+                                class: func,
+                                task: rest,
+                                contrast_label: bold,
+                                dir: PA
+                        }
+                }
+        NEUROMEL:
+                 {
+                        Formats: ['nii', 'dcm'],
+                        QcType: ignore
+                 }
+
+        ##### DERIVATIVES
+        FIELDMAP:
+                 {
+                         Formats: ['nii'],
+                         QcType: ignore,
+                         Bids: {
+                                 class: fmap,
+                                 modality_label: fieldmap,
+                                 pair: {
+                                         label: modality_label,
+                                         with: [magnitude]
+                                 },
+                                 intended_for: [dwi,func]
+                         }
+                 }
+
+        MAGNITUDE:
+                {
+                        Formats: ['nii'],
+                        QcType: ignore,
+                        Bids: {
+                                class: fmap,
+                                modality_label: magnitude,
+                                pair: {
+                                        label: modality_label,
+                                        with: [fieldmap]
+                                },
+                                intended_for: [dwi,func]
+                        }
+                }
+
+        FEENICS_SPRL:
+                {
+                        Formats: ['nii'],
+                        QcType: ignore,
+                        Bids: {
+                                class: func,
+                                contrast_label: bold,
+                                task: sprlrest,
+                                acq: sprlcombined,
+                                fieldmaps: False #Do not use fieldmaps
+                        }
+                }
+
+        CLEANED_TMS-FMRI:
+                {
+                        Formats: ['nii'],
+                        QcType: fmri,
+                        Bids: {
+                                class: func,
+                                contrast_label: bold,
+                                task: tms,
+                                acq: cleaned
+                        }
+                }
+
+        FMRI-DPA-MULT: {
+          Formats: ['nii', 'dcm'],
+          QcType: ignore,
+        }
+
+        FMRI-DAP-MULT: {
+          Formats: ['nii', 'dcm'],
+          QcType: ignore,
+        }
+
+HeaderFieldTolerance:
+  ImagingFrequency: 1
+  EchoTime: 0.005
+  RepetitionTime: 1
+  SpacingBetweenSlices: 4
+  SliceTiming: 0.0026
+  TotalReadoutTime: 0.001
+
+IgnoreHeaderFields:
+ - AcquisitionTime
+ - ProtocolName
+ - SeriesDescription
+ - SeriesNumber
+ - WipMemBlock
+ #SPINS ZHP / SPASD
+ - SAR
+ - ShimSetting
+ - ConversionSoftwareVersion
+ - ImageOrientationPatientDICOM
+ - TxRefAmp
+ #PACTMD
+ - ProcedureStepDescription
+ - SoftwareVersions
+ - ScanOptions
