@@ -47,5 +47,4 @@ jobs:
           fail_ci_if_error: true
           files: airtigrs/coverage.xml
           flags: unittests
-          name: codecov-umbrella
           verbose: true
