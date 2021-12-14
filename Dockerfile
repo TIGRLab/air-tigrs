@@ -1,4 +1,6 @@
-FROM apache/airflow:2.2.1-python3.8
+ARG AIRFLOW_BASE_IMAGE="2.2.1-python3.8"
+
+FROM apache/airflow:${AIRFLOW_BASE_IMAGE}
 
 USER root
 RUN apt-get update && apt-get install --no-install-recommends -y \
@@ -16,6 +18,7 @@ RUN mkdir -p /sources/{airflow,config,archive,dev} && \
 	chown -R airflow:0 /sources
 
 USER airflow
+WORKDIR /home/airflow
 RUN cd $HOME && \
 	git clone https://github.com/TIGRLAB/datman.git && \
 	cd datman && pip install --user .
@@ -24,13 +27,8 @@ ENV PATH="${PATH}:${HOME}/datman/bin"
 ENV DM_CONFIG=/config/main_config.yml
 ENV DM_SYSTEM=docker
 
-## Install airtigrs
-RUN cd $HOME && \
-	git clone https://github.com/jerdra/air-tigrs.git && \
-	cd air-tigrs && \
-	git fetch --all && \
-	git checkout --track origin/ci/github-actions && \
-	pip install --use-deprecated=legacy-resolver --user .[buildtest]
+COPY . ./air-tigrs
+RUN	cd air-tigrs \
+	&& pip install --use-deprecated=legacy-resolver --user .[buildtest]
 
-WORKDIR /home/airflow/
 ENTRYPOINT ["/bin/bash"]
