@@ -2,6 +2,7 @@ ARG AIRFLOW_BASE_IMAGE="2.2.1-python3.8"
 
 FROM apache/airflow:${AIRFLOW_BASE_IMAGE}
 
+
 USER root
 RUN apt-get update && apt-get install --no-install-recommends -y \
 	wget git gettext
@@ -19,8 +20,12 @@ RUN mkdir -p /sources/{airflow,config,archive,dev} && \
 
 USER airflow
 WORKDIR /home/airflow
+
+ARG DATMAN_REPOSITORY="https://github.com/TIGRLab/datman.git"
+ARG DATMAN_BRANCH="master"
+
 RUN cd $HOME && \
-	git clone https://github.com/TIGRLAB/datman.git && \
+	git clone --branch ${DATMAN_BRANCH} ${DATMAN_REPOSITORY} && \
 	cd datman && pip install --user .
 
 ENV PATH="${PATH}:${HOME}/datman/bin"
