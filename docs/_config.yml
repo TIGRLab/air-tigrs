@@ -18,3 +18,10 @@ repository:
   url: https://github.com/tigrlab/air-tigrs
   path_to_book: docs
   branch: main
+
+# Set sphinx extensions for build
+sphinx:
+  extra_extensions:
+    - 'sphinx.ext.autodoc'
+    - 'sphinx.ext.napoleon'
+    - 'sphinx.ext.viewcode'
