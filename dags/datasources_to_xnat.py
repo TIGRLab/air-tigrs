@@ -11,6 +11,7 @@ from airflow.operators.bash import BashOperator
 from airtigrs.operators.sftp import SFTPFetchOperator
 import datman.config
 import airtigrs.utils.connections as conn
+import airtigrs.utils.xnat as xnat
 
 default_args = {
     'owner': 'airflow',
@@ -54,7 +55,7 @@ def make_dag(dag_id, study, config, default_args):
         if conn.conn_id_exists(conn_id):
             sftp_config.append((site, conn_id))
 
-        if conn.external_xnat_is_configured(config, site):
+        if xnat.external_xnat_is_configured(config, site):
             fetch_xnat = True
 
     if not fetch_xnat and not sftp_config:
