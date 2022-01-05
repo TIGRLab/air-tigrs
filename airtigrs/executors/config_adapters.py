@@ -11,9 +11,6 @@ from abc import ABC, abstractmethod
 if TYPE_CHECKING:
     from drmaa import JobTemplate
 
-# Flesh this type out
-DRMAASpec = Dict
-
 # DRMAA specific fields, anything else should be put into native spec
 DRMAA_FIELDS = [
     "email", "deadlineTime", "errorPath", "hardRunDurationLimit",
@@ -51,12 +48,12 @@ class DRMConfigAdapter(ABC):
         return jt
 
     @abstractmethod
-    def drm2drmaa(self):
+    def drm2drmaa(self) -> str:
         '''
         Build native specification from DRM-specific fields
         '''
 
-    def _map_fields(self, drm_kwargs):
+    def _map_fields(self, drm_kwargs: Dict[str, Any]):
         '''
         Transform fields in `_mapped_fields` to
         DRMAA-compliant specification. Adds
@@ -145,13 +142,14 @@ class SlurmAdapter(DRMConfigAdapter):
                 setattr(self, field.name, ",".join(value))
 
     @abstractmethod
-    def drm2drmaa(self):
+    def drm2drmaa(self) -> str:
         return self._transform_attrs()
 
-    def _transform_attrs(self) -> Dict:
+    def _transform_attrs(self) -> str:
         '''
         Remap named attributes to "-" form, excludes renaming
-        DRMAA-compliant fields (set in __post_init__())
+        DRMAA-compliant fields (set in __post_init__()) then join
+        attributes into a nativeSpecification string
         '''
 
         out = []
