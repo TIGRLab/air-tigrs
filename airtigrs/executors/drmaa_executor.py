@@ -1,11 +1,13 @@
 import drmaa
 
 from typing import TYPE_CHECKING
-from typing import Optional, Any, Tuple, Dict
+from typing import Optional, Tuple, Dict
 from multiprocessing import Queue, Empty
 
 from airflow.executors.base_executor import BaseExecutor, NOT_STARTED_MESSAGE
 from airflow.exceptions import AirflowException
+
+import airflow.executors.config_adapters as adapters
 
 if TYPE_CHECKING:
     from airflow.models.taskinstance import (TaskInstanceKey,
@@ -33,6 +35,9 @@ class DRMAAExecutor(BaseExecutor):
     def start(self) -> None:
         self.session = drmaa.Session()
         self.session.initialize()
+
+        # Get cluster information?
+        # Use config?
 
     def end(self) -> None:
         # TODO wait for jobs to complete? Maybe not since
@@ -65,32 +70,27 @@ class DRMAAExecutor(BaseExecutor):
             except Empty:
                 break
 
-    def execute_async(self,
-                      key: TaskInstanceKey,
-                      command: CommandType,
-                      queue: Optional[str] = None,
-                      executor_config: Optional[Any] = None) -> None:
+    def execute_async(
+        self,
+        key: TaskInstanceKey,
+        command: CommandType,
+        executor_config: adapters.DRMConfigAdapter,
+        queue: Optional[str] = None,
+    ) -> None:
         '''
         Submit slurm job and keep track of submission
         '''
         if self.task_queue is None:
             raise AirflowException(NOT_STARTED_MESSAGE)
 
-        # Implements checks?
-        # Submit jobs immediately?
-        # Yeah why not... can implement limits later...
-
         self.task_queue.put((key, command, queue, executor_config))
 
-        # TODO: Track task info
-        # Sync step should run jobs in a batched fashion
-        # If using unlimited, the allow submission directly to the queue
-        # using DRMAA API
-        jt = self.session.createJobTemplate()
+        jt = executor_config.drm2drmaa(self.session.createJobTemplate())
         jt.remoteCommand = command[0]
         jt.args = command[1:]
 
-        # Need to configure job attributes
-        # We have a bunch of recognized stuff and a bunch
-        # of unrecognized stuff
+        # TODO: Use jobID to track information about running job
+        self.session.runJob(jt)
 
+        # Prevent memory leaks on C back-end
+        self.session.deleteJobTemplate(jt)
