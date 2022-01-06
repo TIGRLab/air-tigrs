@@ -35,6 +35,24 @@ class DRMConfigAdapter(ABC):
 
     _mapped_fields: ClassVar[Dict[str, Any]]
 
+    def __str__(self):
+        '''
+        Display formatted configuration for executor
+        '''
+        attrs = asdict(self)
+        drmaa_fields = "\n".join([
+            f"{field}:\t{attrs.get(field)}" for field in DRMAA_FIELDS
+            if attrs.get(field) is not None
+        ])
+
+        drm_fields = "\n".join([
+            f"{field}:\t{attrs.get(field)}" for field in self._native_fields()
+            if attrs.get(field) is not None
+        ])
+
+        return ("DRMAA Config:\n" + drmaa_fields + "\nNative Specification\n" +
+                drm_fields)
+
     def get_drmaa_config(self, jt: JobTemplate) -> JobTemplate:
         '''
         Apply settings onto DRMAA JobTemplate
@@ -74,6 +92,13 @@ class DRMConfigAdapter(ABC):
 
     def __post_init__(self, **kwargs):
         self._map_fields(**kwargs)
+
+    def _native_fields(self):
+        return [
+            f for f in asdict(self).keys()
+            if (f not in self._mapped_fields.keys()) and (
+                f not in DRMAA_FIELDS)
+        ]
 
 
 @dataclass
@@ -153,8 +178,10 @@ class SlurmAdapter(DRMConfigAdapter):
         '''
 
         out = []
-        for field, value in asdict(self).items():
-            if (field in DRMAA_FIELDS) or (value is None):
+        for field in self._native_fields():
+
+            value = getattr(self, field)
+            if value is None:
                 continue
 
             field_fmtd = field.replace("_", "-")
