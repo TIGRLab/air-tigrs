@@ -8,6 +8,7 @@ from airflow.executors.base_executor import BaseExecutor, NOT_STARTED_MESSAGE
 from airflow.exceptions import AirflowException
 
 import airflow.executors.config_adapters as adapters
+from airflow.utils.log.logging_mixin import LoggingMixin
 
 if TYPE_CHECKING:
     from airflow.models.taskinstance import (TaskInstanceKey,
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
 DRMAAWorkType = Tuple[TaskInstanceKey, CommandType, Dict]
 
 
-class DRMAAExecutor(BaseExecutor):
+class DRMAAExecutor(BaseExecutor, LoggingMixin):
     """
     Submit jobs to an HPC cluster using the DRMAA API
     """
@@ -33,6 +34,7 @@ class DRMAAExecutor(BaseExecutor):
         self.session: Optional[drmaa.Session] = None
 
     def start(self) -> None:
+        self.log.info("Initializing DRMAA session")
         self.session = drmaa.Session()
         self.session.initialize()
 
@@ -40,8 +42,10 @@ class DRMAAExecutor(BaseExecutor):
         # Use config?
 
     def end(self) -> None:
-        # TODO wait for jobs to complete? Maybe not since
-        # we may be able to re-attach at any point?
+        self.log.info("Cleaning up remaining job statuses")
+        # TODO: Sync job status to current
+
+        self.log.info("Terminating DRMAA session")
         self.session.exit()
 
     def sync(self) -> None:
@@ -53,6 +57,8 @@ class DRMAAExecutor(BaseExecutor):
         """
         if self.results_queue is None:
             raise AirflowException(NOT_STARTED_MESSAGE)
+
+        # Sync to get current state of scheduler
 
         while not True:
             try:
@@ -84,13 +90,22 @@ class DRMAAExecutor(BaseExecutor):
             raise AirflowException(NOT_STARTED_MESSAGE)
 
         self.task_queue.put((key, command, queue, executor_config))
-
+        self.log.info(f"Submitting job {key} with command {command} with"
+                      f" configuration options:\n{executor_config})")
         jt = executor_config.drm2drmaa(self.session.createJobTemplate())
+
+        # CommandType always begins with "airflow" binary command
         jt.remoteCommand = command[0]
         jt.args = command[1:]
 
         # TODO: Use jobID to track information about running job
+        # returned by following command
         self.session.runJob(jt)
 
-        # Prevent memory leaks on C back-end
+        # Prevent memory leaks on C back-end, running jobs unaffected
+        # https://drmaa-python.readthedocs.io/en/latest/drmaa.html
         self.session.deleteJobTemplate(jt)
+
+        # Need to keep a record of the job for us to use later on
+        # needs to be persistent in case the scheduler/executor instance
+        # crashes
