@@ -8,11 +8,9 @@ from airflow import DAG
 from airflow.utils.dates import days_ago
 
 from airflow.operators.bash import BashOperator
-from airtigrs.plugins.operators.sftp import SFTPFetchOperator
-from airflow.models.connection import Connection
-from airflow.exceptions import AirflowNotFoundException
+from airtigrs.operators.sftp import SFTPFetchOperator
 import datman.config
-from airtigrs.dags.datasources_to_xnat import utils
+import airtigrs.utils.connections as conn
 
 default_args = {
     'owner': 'airflow',
@@ -53,10 +51,10 @@ def make_dag(dag_id, study, config, default_args):
     fetch_xnat = False
     for site in config.get_sites():
         conn_id = f"{study}_{site}_sftp"
-        if utils.conn_id_exists(conn_id):
+        if conn.conn_id_exists(conn_id):
             sftp_config.append((site, conn_id))
 
-        if utils.external_xnat_is_configured(config, site):
+        if conn.external_xnat_is_configured(config, site):
             fetch_xnat = True
 
     if not fetch_xnat and not sftp_config:

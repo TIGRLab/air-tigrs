@@ -1,0 +1,50 @@
+---
+name: Build-Test
+on:
+  push:
+  pull_request:
+    branches:
+      - main
+
+
+jobs:
+  build-test:
+    env:
+      AIRFLOW_HOME: ${{ github.workspace }}
+    name: Install airtigrs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install package
+        run: |
+          pip install -r requirements.txt
+          pip install -q -e .[buildtest]
+
+      - name: Run unit tests
+        run: |
+          cd $AIRFLOW_HOME/airtigrs
+          py.test --cov=./ --cov-report=xml -v . 
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v2
+        if: ${{ !env.ACT }}
+        with:
+          fail_ci_if_error: true
+          files: airtigrs/coverage.xml
+          flags: unittests
+          verbose: true

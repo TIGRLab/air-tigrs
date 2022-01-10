@@ -1,6 +1,5 @@
-# Table of contents
-# Learn more at https://jupyterbook.org/customize/toc.html
-
-- file: index
+format: jb-article
+root: index
+sections:
 - file: contributing
 - file: security
