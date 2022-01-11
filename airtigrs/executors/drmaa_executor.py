@@ -25,6 +25,7 @@ JOB_STATE_MAP = {
 }
 
 
+# TODO: Create JobTracker helper class
 class DRMAAV1Executor(BaseExecutor, LoggingMixin):
     """
     Submit jobs to an HPC cluster using the DRMAA v1 API
@@ -124,13 +125,11 @@ class DRMAAV1Executor(BaseExecutor, LoggingMixin):
                 self.change_state(status, None)
                 self._drop_from_tracking(job_id)
 
-    def execute_async(
-        self,
-        key: TaskInstanceKey,
-        command: CommandType,
-        executor_config: adapters.DRMConfigAdapter,
-        queue: Optional[str] = None,
-    ) -> None:
+    def execute_async(self,
+                      key: TaskInstanceKey,
+                      command: CommandType,
+                      executor_config: adapters.DRMConfigAdapter,
+                      queue: Optional[str] = None) -> None:
         '''
         Submit slurm job and keep track of submission
         '''
