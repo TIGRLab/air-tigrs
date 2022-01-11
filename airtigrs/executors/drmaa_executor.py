@@ -91,10 +91,12 @@ class DRMAAV1Executor(BaseExecutor, LoggingMixin):
         if current_jobs:
             print_jobs = "\n".join([j_id for j_id in current_jobs["jobs"]])
             self.log.info(f"Jobs from previous session:\n{print_jobs}")
+        else:
+            self.log.info("No jobs are currently being tracked")
 
     def end(self) -> None:
         self.log.info("Cleaning up remaining job statuses")
-        # TODO: Sync job status to current
+        self.sync()
 
         self.log.info("Terminating DRMAA session")
         self.session.exit()
