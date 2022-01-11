@@ -13,7 +13,7 @@ from airflow.utils.state import State
 from airflow.models import Variable
 
 if TYPE_CHECKING:
-    from airflow.models.taskinstance import (TaskInstanceKey)
+    from airflow.models.taskinstance import TaskInstanceKey
     from airflow.executors.base_executor import CommandType
     from sqlalchemy.orm import Session
 
@@ -131,10 +131,8 @@ class DRMAAV1Executor(BaseExecutor, LoggingMixin):
                       executor_config: adapters.DRMConfigAdapter,
                       queue: Optional[str] = None) -> None:
         '''
-        Submit slurm job and keep track of submission
+        Submit slurm job and track job id
         '''
-        if self.task_queue is None:
-            raise AirflowException(NOT_STARTED_MESSAGE)
 
         self.log.info(f"Submitting job {key} with command {command} with"
                       f" configuration options:\n{executor_config})")
