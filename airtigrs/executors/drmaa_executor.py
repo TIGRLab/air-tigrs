@@ -1,8 +1,7 @@
 import drmaa
 
 from typing import TYPE_CHECKING
-from typing import Optional, Tuple, Dict, List
-from multiprocessing import Queue, Empty
+from typing import Optional, List
 
 from airflow.executors.base_executor import BaseExecutor, NOT_STARTED_MESSAGE
 from airflow.exceptions import AirflowException
@@ -10,21 +9,25 @@ from airflow.exceptions import AirflowException
 import airflow.executors.config_adapters as adapters
 from airflow.utils.log.logging_mixin import LoggingMixin
 from airflow.utils.session import provide_session
+from airflow.utils.state import State
 from airflow.models import Variable
 
 if TYPE_CHECKING:
-    from airflow.models.taskinstance import (TaskInstanceKey,
-                                             TaskInstanceStateType)
+    from airflow.models.taskinstance import (TaskInstanceKey)
     from airflow.executors.base_executor import CommandType
     from sqlalchemy.orm import Session
 
-# (key, command, job spec)
-DRMAAWorkType = Tuple[TaskInstanceKey, CommandType, Dict]
+JOB_STATE_MAP = {
+    drmaa.JobState.QUEUED_ACTIVE: State.QUEUED,
+    drmaa.JobState.RUNNING: State.RUNNING,
+    drmaa.JobState.DONE: State.SUCCESS,
+    drmaa.JobState.FAILED: State.FAILED
+}
 
 
-class DRMAAExecutor(BaseExecutor, LoggingMixin):
+class DRMAAV1Executor(BaseExecutor, LoggingMixin):
     """
-    Submit jobs to an HPC cluster using the DRMAA API
+    Submit jobs to an HPC cluster using the DRMAA v1 API
     """
     def __init__(self, max_concurrent_jobs: Optional[int] = None):
         super().__init__()
@@ -32,13 +35,11 @@ class DRMAAExecutor(BaseExecutor, LoggingMixin):
         self.max_concurrent_jobs: Optional[int] = max_concurrent_jobs
         self.active_jobs: int = 0
         self.jobs_submitted: int = 0
-        self.results_queue: Optional[Queue[TaskInstanceStateType]] = None
-        self.task_queue: Optional[Queue[DRMAAWorkType]] = None
         self.session: Optional[drmaa.Session] = None
 
     # TODO: Make `scheduler_job_ids` configurable under [executor]
     @provide_session
-    def _get_or_create_job_var(self,
+    def _get_or_create_job_ids(self,
                                session: Optional[Session] = None) -> List[int]:
         current_jobs = Variable.get("scheduler_job_ids",
                                     default_var=None,
@@ -54,22 +55,28 @@ class DRMAAExecutor(BaseExecutor, LoggingMixin):
         return current_jobs["jobs"]
 
     @provide_session
-    def _push_job_id(self,
-                     job_id: int,
-                     session: Optional[Session] = None) -> None:
-
-        current_jobs = self._get_or_create_job_var()
-        current_jobs.append(job_id)
-        write_json = {"jobs": current_jobs}
+    def _update_job_tracker(self,
+                            jobs: List[int],
+                            session: Optional[Session] = None) -> None:
+        write_json = {"jobs": jobs}
         Variable.update("scheduler_job_ids",
                         write_json,
                         serialize_json=True,
                         session=session)
 
-    def push_to_tracking(self, job_id: int) -> None:
+    def _drop_from_tracking(self, job_id: int) -> None:
+        self.log.info(
+            "Removing Job {job_id} from tracking variable `scheduler_job_ids`")
+        new_state = [j for j in self._get_or_create_job_ids() if j != job_id]
+        self._update_job_tracker(new_state)
+        self.log.info("Successfully removed {job_id} from `scheduler_job_ids`")
+
+    def _push_to_tracking(self, job_id: int) -> None:
         self.log.info(
             "Adding Job {job_id} to tracking variable `scheduler_job_ids`")
-        self._push_job_id(job_id)
+        current_jobs = self._get_or_create_job_ids()
+        current_jobs.append(job_id)
+        self._update_job_tracker(current_jobs)
         self.log.info("Successfully added {job_id} to `scheduler_job_ids`")
 
     def start(self) -> None:
@@ -79,7 +86,7 @@ class DRMAAExecutor(BaseExecutor, LoggingMixin):
 
         self.log.info(
             "Getting job tracking Airflow Variable: `scheduler_job_ids`")
-        current_jobs = self._get_or_create_job_var()
+        current_jobs = self._get_or_create_job_ids()
 
         if current_jobs:
             print_jobs = "\n".join([j_id for j_id in current_jobs["jobs"]])
@@ -97,28 +104,23 @@ class DRMAAExecutor(BaseExecutor, LoggingMixin):
         Called periodically by `airflow.executors.base_executor.BaseExecutor`'s
         heartbeat.
 
-        Read the current state of tasks in results_queue and update the metaDB
+        Read the current state of tasks in the scheduler and update the metaDB
         """
-        if self.results_queue is None:
-            raise AirflowException(NOT_STARTED_MESSAGE)
 
-        # Sync to get current state of scheduler
-
-        while not True:
+        # Go through currently running jobs and update state
+        scheduled_jobs = self._get_or_create_job_ids()
+        for job_id in scheduled_jobs:
+            drmaa_status = self.jobStatus(job_id)
             try:
-                # No wait because we don't want to wait for
-                # long running jobs
-                results = self.results_queue.get_nowait()
-                try:
-                    self.change_state(*results)
-                except Exception:
-                    # Figure out the proper way to handle this
-                    # re-submit?
-                    raise
-                finally:
-                    self.results_queue.task_done()
-            except Empty:
-                break
+                status = JOB_STATE_MAP[drmaa_status]
+            except KeyError:
+                self.log.info(
+                    "Got unexpected state {drmaa_status} for job #{job_id}"
+                    " Cannot be mapped into an Airflow TaskInstance State"
+                    " Will try again in next sync attempt...")
+            else:
+                self.change_state(status, None)
+                self._drop_from_tracking(job_id)
 
     def execute_async(
         self,
@@ -133,19 +135,19 @@ class DRMAAExecutor(BaseExecutor, LoggingMixin):
         if self.task_queue is None:
             raise AirflowException(NOT_STARTED_MESSAGE)
 
-        self.task_queue.put((key, command, queue, executor_config))
         self.log.info(f"Submitting job {key} with command {command} with"
                       f" configuration options:\n{executor_config})")
         jt = executor_config.drm2drmaa(self.session.createJobTemplate())
 
         # CommandType always begins with "airflow" binary command
         jt.remoteCommand = command[0]
+
+        # args to airflow follow
         jt.args = command[1:]
 
-        # Submit job and track in airflow variable
         job_id = self.session.runJob(jt)
         self.log.info(f"Submitted Job {job_id}")
-        self.push_to_tracking(job_id)
+        self._push_to_tracking(job_id)
 
         # Prevent memory leaks on C back-end, running jobs unaffected
         # https://drmaa-python.readthedocs.io/en/latest/drmaa.html
