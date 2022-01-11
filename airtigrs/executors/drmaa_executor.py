@@ -142,8 +142,7 @@ class DRMAAExecutor(BaseExecutor, LoggingMixin):
         jt.remoteCommand = command[0]
         jt.args = command[1:]
 
-        # TODO: Use jobID to track information about running job
-        # returned by following command
+        # Submit job and track in airflow variable
         job_id = self.session.runJob(jt)
         self.log.info(f"Submitted Job {job_id}")
         self.push_to_tracking(job_id)
