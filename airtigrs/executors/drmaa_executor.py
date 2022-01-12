@@ -128,7 +128,7 @@ class DRMAAV1Executor(BaseExecutor, LoggingMixin):
     def execute_async(self,
                       key: TaskInstanceKey,
                       command: CommandType,
-                      executor_config: adapters.DRMConfigAdapter,
+                      executor_config: adapters.DRMAACompatible,
                       queue: Optional[str] = None) -> None:
         '''
         Submit slurm job and track job id

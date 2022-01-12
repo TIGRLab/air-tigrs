@@ -21,7 +21,7 @@ DRMAA_FIELDS = [
 
 
 @dataclass
-class DRMConfigAdapter(ABC):
+class DRMAACompatible(ABC):
     '''
     Abstract dataclass for mapping DRM specific configuration to a
     DRMAA compatible specification
@@ -102,7 +102,7 @@ class DRMConfigAdapter(ABC):
 
 
 @dataclass
-class SlurmAdapter(DRMConfigAdapter):
+class SlurmConfig(DRMConfigAdapter):
     '''
     Transform SLURM resource specification into DRMAA-compliant inputs
 
@@ -163,7 +163,7 @@ class SlurmAdapter(DRMConfigAdapter):
 
         for field in fields(self):
             value = getattr(self, field.name)
-            if field.type == Union[List[str], str] and value:
+            if field.type == Union[List[str], str] and isinstance(value, list):
                 setattr(self, field.name, ",".join(value))
 
     @abstractmethod
