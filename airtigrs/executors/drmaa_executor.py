@@ -3,6 +3,8 @@ import drmaa
 from typing import TYPE_CHECKING
 from typing import Optional, List
 
+from functools import wraps
+
 from airflow.executors.base_executor import BaseExecutor, NOT_STARTED_MESSAGE
 from airflow.exceptions import AirflowException
 
@@ -25,6 +27,16 @@ JOB_STATE_MAP = {
 }
 
 
+def check_started(method):
+    @wraps(method)
+    def _impl(self, *method_args, **method_kwargs):
+        if self.session is None:
+            raise AirflowException(NOT_STARTED_MESSAGE)
+        method(self, *method_args, **method_kwargs)
+
+    return _impl
+
+
 # TODO: Create JobTracker helper class
 class DRMAAV1Executor(BaseExecutor, LoggingMixin):
     """
@@ -33,10 +45,16 @@ class DRMAAV1Executor(BaseExecutor, LoggingMixin):
     def __init__(self, max_concurrent_jobs: Optional[int] = None):
         super().__init__()
 
-        self.max_concurrent_jobs: Optional[int] = max_concurrent_jobs
         self.active_jobs: int = 0
         self.jobs_submitted: int = 0
         self.session: Optional[drmaa.Session] = None
+
+        # Not yet implemented
+        self.max_concurrent_jobs: Optional[int] = max_concurrent_jobs
+
+    @property
+    def active_jobs(self) -> int:
+        return len(self._get_or_create_job_ids())
 
     # TODO: Make `scheduler_job_ids` configurable under [executor]
     @provide_session
@@ -95,6 +113,7 @@ class DRMAAV1Executor(BaseExecutor, LoggingMixin):
         else:
             self.log.info("No jobs are currently being tracked")
 
+    @check_started
     def end(self) -> None:
         self.log.info("Cleaning up remaining job statuses")
         self.sync()
@@ -125,6 +144,7 @@ class DRMAAV1Executor(BaseExecutor, LoggingMixin):
                 self.change_state(status, None)
                 self._drop_from_tracking(job_id)
 
+    @check_started
     def execute_async(self,
                       key: TaskInstanceKey,
                       command: CommandType,
@@ -151,3 +171,4 @@ class DRMAAV1Executor(BaseExecutor, LoggingMixin):
         # Prevent memory leaks on C back-end, running jobs unaffected
         # https://drmaa-python.readthedocs.io/en/latest/drmaa.html
         self.session.deleteJobTemplate(jt)
+        self.jobs_submitted += 1
