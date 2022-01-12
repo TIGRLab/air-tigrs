@@ -28,6 +28,10 @@ JOB_STATE_MAP = {
 
 
 def check_started(method):
+    '''
+    Check whether executor has been initialized with
+    drmaa.Session object
+    '''
     @wraps(method)
     def _impl(self, *method_args, **method_kwargs):
         if self.session is None:
@@ -164,7 +168,9 @@ class DRMAAV1Executor(BaseExecutor, LoggingMixin):
         # args to airflow follow
         jt.args = command[1:]
 
+        # TODO: Figure out exception handling when job submission fails
         job_id = self.session.runJob(jt)
+
         self.log.info(f"Submitted Job {job_id}")
         self._push_to_tracking(job_id)
 
