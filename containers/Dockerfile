@@ -36,4 +36,6 @@ COPY . ./air-tigrs
 RUN	cd air-tigrs \
 	&& pip install --use-deprecated=legacy-resolver --user .[buildtest]
 
-ENTRYPOINT ["/bin/bash"]
+COPY docker-entrypoint.sh /
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD []
