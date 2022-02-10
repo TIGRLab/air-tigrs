@@ -94,9 +94,9 @@ function wait_for_slurm_connect(){
 
 }
 
-if [[ "${CONNECTION_CHECK_MAX_COUNT}" -gt "0" ]]; then
+if [[ "${CONNECTION_ATTEMPTS_MAX}" -gt "0" ]]; then
 	echo "---- Checking Airflow MetaDB status ----"
-	run_check_with_retries "airflow db check"
+	run_with_retries "airflow db check"
 fi
 
 if [[ ${COMMAND} =~ ^(init)$ ]]; then
@@ -105,7 +105,7 @@ if [[ ${COMMAND} =~ ^(init)$ ]]; then
 fi
 
 if [[ ${COMMAND} =~ ^(scheduler|drmaa)$ ]] \
-	&& [[ "${CONNECTION_CHECK_MAX_COUNT}" -gt "0" ]]; then
+	&& [[ "${CONNECTION_ATTEMPTS_MAX}" -gt "0" ]]; then
 	check_additional_pip
 
 	if [[ ${COMMAND} =~ ^(drmaa)$ ]]; then
@@ -125,6 +125,7 @@ if [[ ${COMMAND} =~ ^(scheduler|drmaa)$ ]] \
 	fi
 	start_scheduler
 fi
+
 
 if [[ ${COMMAND} =~ ^(webserver)$ ]]; then
 	check_additional_pip
