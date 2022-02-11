@@ -65,20 +65,6 @@ function check_additional_pip(){
 	fi
 }
 
-
-function setup_development_environment() {
-# Initialize shared archive directory
-
-	log "Creating Archive source directory"
-	mkdir -p /sources/archive
-	chown -R "${AIRFLOW_UID}:${AIRFLOW_GID}" /sources/archive ${AIRFLOW_HOME}
-
-	if [[ -n "${AIRTIGRS_DEVELOPMENT_SETUP=}" ]]; then
-		log "AIRTIGRS_DEVELOPMENT_SETUP set, constructing archive"
-		/sources/dev/archive-setup.sh /sources/archive /sources/dev
-	fi
-}
-
 function initialize_webserver() {
 	airflow db init
 	airflow users create \
