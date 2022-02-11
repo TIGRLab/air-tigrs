@@ -2,8 +2,16 @@
 
 ## Entrypoint script to spin up and connect various airflow services
 # Will fail if it cannot connect after CONNECTION_ATTEMPTS_MAX attempts
+# Commands:
+#	webserver - start Airflow webserver
+#	scheduler [SERVICE_COMMAND] - start Airflow scheduler
+# If scheduler is provided, an additional SERVICE_COMMAND can be specified
+# to run checks with retries on. (i.e sacct for SLURM services)
+# This is not necessary for "LocalExecutor" and "SequentialExecutor" as they
+# do not require additional services be available
 
 COMMAND=${1:-}
+SERVICE_COMMAND=${2:-}
 
 CONNECTION_ATTEMPTS_MAX=${CONNECTION_ATTEMPTS_MAX:-8}
 readonly CONNECTION_ATTEMPTS_MAX
@@ -63,12 +71,11 @@ function setup_development_environment() {
 	fi
 }
 
-function start_webserver() {
-	echo "---- Instantiating Airflow Webserver ----"
+function initialize_webserver() {
 	airflow db init
 	airflow users create \
-		--username ${AIRFLOW_WEB_USER} \
-		--password ${AIRFLOW_WEB_PASSWORD} \
+		--username ${AIRFLOW_WEB_USER:-airflow} \
+		--password ${AIRFLOW_WEB_PASSWORD:-airflow} \
 		--firstname Datman \
 		--lastname Clevis \
 		--role Admin \
@@ -78,17 +85,19 @@ function start_webserver() {
 		echo "---- AIRTIGRS_DEFAULT_CONNECTIONS set, importing ----"
 		airflow connections import $AIRTIGRS_DEFAULT_CONNECTIONS
 	fi
-
 }
 
 function start_scheduler(){
 	run_with_retries "airflow scheduler"
 }
 
+function start_webserver(){
+	run_with_retries "airflow webserver"
+}
 
 function wait_for_slurm_connect(){
 	echo "---- Connecting to SLURM controller ----"
-	# Command to try is sacct
+	# Command to try is sacct or some DRMAA-implemented interface?
 	# Check if command is available, if not then bad
 	run_with_retries "sacct"
 
@@ -99,37 +108,49 @@ if [[ "${CONNECTION_ATTEMPTS_MAX}" -gt "0" ]]; then
 	run_with_retries "airflow db check"
 fi
 
-if [[ ${COMMAND} =~ ^(init)$ ]]; then
-	setup_development_environment
-	airflow version
-fi
-
-if [[ ${COMMAND} =~ ^(scheduler|drmaa)$ ]] \
+if [[ ${COMMAND} =~ ^(scheduler)$ ]] \
 	&& [[ "${CONNECTION_ATTEMPTS_MAX}" -gt "0" ]]; then
+
+	# Get executor
+	CONFIGURED_EXEC=$(airflow config get-value core executor)
+	readonly CONFIGURED_EXEC
+
 	check_additional_pip
 
-	if [[ ${COMMAND} =~ ^(drmaa)$ ]]; then
+	if [[ !{CONFIGURED_EXEC} ]]; then
+		echo "---- No Executor configured, using SequentialExecutor ----"
+		export AIRFLOW___CORE___EXECUTOR="SequentialExecutor"
 
-		# Check to make sure we're configured for DRMAA
-		CONFIGURED_EXEC=$(airflow config get-value core executor)
-		if [[ ${CONFIGURED_EXEC} =~ ".*DRMAA.*" ]]; then
-			echo -n "ERROR: Requested DRMAA executor but "
-			echo "AIRFLOW__CORE__EXECUTOR=${AIRFLOW__CORE__EXECUTOR} "
-			echo "Set AIRFLOW__CORE__EXECUTOR to use a DRMAA-type executor"
-			echo "Exiting with error..."
-			exit 1
-		fi
-
-		# Use DRMAA-specific checks instead?
-		wait_for_slurm_connect
+	elif [[ ${CONFIGURED_EXEC} =~ ^(LocalExecutor|SequentialExecutor)$ ]]; then
+		# Local/Sequential Executor has no additional requirements
+		echo "---- Requested ${CONFIGURED_EXEC}, starting... ----"
+	elif [[ ! ${SERVICE_COMMAND} ]]; then
+		# All other executors require external services
+		# If a SERVICE_COMMAND is not given, then we cannot
+		# check if the scheduler will be able to run jobs
+		echo -n "FAILED: Requested ${CONFIGURED_EXEC} but SERVICE_COMMAND "
+		echo "not specified!"
+		echo -n "FAILED: Provide a SERVICE_COMMAND so that service available "
+		echo "for scheduler on start!"
+		exit 1
+	else
+		echo "---- Requested ${CONFIGURED_EXEC} ----"
+		echo "---- Ensuring service is available with ${SERVICE_COMMAND} ----"
+		run_with_retries $SERVICE_COMMAND
 	fi
+
+	echo "---- Starting Scheduler ----"
 	start_scheduler
 fi
 
 
 if [[ ${COMMAND} =~ ^(webserver)$ ]]; then
 	check_additional_pip
+
+	echo "---- Initializing DB ----"
+	initialize_webserver
+
+	echo "---- Starting Webserver ----"
 	start_webserver
-	airflow webserver
 fi
 
