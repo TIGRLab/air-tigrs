@@ -89,13 +89,6 @@ function start_webserver(){
 	run_with_retries "airflow webserver"
 }
 
-function wait_for_slurm_connect(){
-	log "Connecting to SLURM controller"
-	# Command to try is sacct or some DRMAA-implemented interface?
-	# Check if command is available, if not then bad
-	run_with_retries "sacct"
-
-}
 
 if [[ "${CONNECTION_ATTEMPTS_MAX}" -gt "0" ]]; then
 	log "Checking Airflow MetaDB status"
