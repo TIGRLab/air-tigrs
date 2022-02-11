@@ -19,6 +19,14 @@ readonly CONNECTION_ATTEMPTS_MAX
 CONNECTION_INTERVAL=${CONNECTION_INTERVAL:-5}
 readonly CONNECTION_INTERVAL
 
+function log(){
+	echo "---- $1 ----"
+}
+
+function log_failed(){
+	echo "FAILED: $1"
+}
+
 function run_with_retries(){
 
 	local cmd
@@ -31,8 +39,8 @@ function run_with_retries(){
 
 	while [ ${status} -ne 0 ]; do
 		[[ counter -eq $CONNECTION_ATTEMPTS_MAX ]] && \
-			echo "Reached maximum number of attempts ${CONNECTION_ATTEMPTS_MAX}" && \
-			echo "Failed to run command $cmd! Ensure DB service is available" && \
+			log_failed "Reached maximum number of attempts ${CONNECTION_ATTEMPTS_MAX}" && \
+			log_failed "Failed to run command $cmd! Ensure DB service is available" && \
 			exit 1
 
 		echo "Waiting ${CONNECTION_INTERVAL} seconds before re-attempting connection"
@@ -41,7 +49,7 @@ function run_with_retries(){
 		echo "Starting attempt #$((counter + 1))"
 		eval "$cmd 2>&1"
 		status=$?
-		echo "FAILED: Command exited with code ${status}"
+		log_failed "Command exited with code ${status}"
 		((counter++))
 	done
 	set -e
@@ -49,7 +57,7 @@ function run_with_retries(){
 
 function check_additional_pip(){
 	if [[ -n "${_PIP_ADDITIONAL_REQUIREMENTS=}" ]]; then
-		echo "---- _PIP_ADDITIONAL_REQUIREMENTS defined, installing ----"
+		log "_PIP_ADDITIONAL_REQUIREMENTS defined, installing"
 		echo "Installing: ${_PIP_ADDITIONAL_REQUIREMENTS}"
 		echo "This is not suitable for production and/or staging environments!"
 		echo "Build a custom image instead if additional requirements needed"
@@ -61,12 +69,12 @@ function check_additional_pip(){
 function setup_development_environment() {
 # Initialize shared archive directory
 
-	echo "---- Creating Archive source directory ----"
+	log "Creating Archive source directory"
 	mkdir -p /sources/archive
 	chown -R "${AIRFLOW_UID}:${AIRFLOW_GID}" /sources/archive ${AIRFLOW_HOME}
 
 	if [[ -n "${AIRTIGRS_DEVELOPMENT_SETUP=}" ]]; then
-		echo "---- AIRTIGRS_DEVELOPMENT_SETUP set, constructing archive ----"
+		log "AIRTIGRS_DEVELOPMENT_SETUP set, constructing archive"
 		/sources/dev/archive-setup.sh /sources/archive /sources/dev
 	fi
 }
@@ -82,7 +90,7 @@ function initialize_webserver() {
 		--email example@example.com
 
 	if [[ -n "${AIRTIGRS_DEFAULT_CONNECTIONS=}" ]]; then
-		echo "---- AIRTIGRS_DEFAULT_CONNECTIONS set, importing ----"
+		log "AIRTIGRS_DEFAULT_CONNECTIONS set, importing"
 		airflow connections import $AIRTIGRS_DEFAULT_CONNECTIONS
 	fi
 }
@@ -96,7 +104,7 @@ function start_webserver(){
 }
 
 function wait_for_slurm_connect(){
-	echo "---- Connecting to SLURM controller ----"
+	log "Connecting to SLURM controller"
 	# Command to try is sacct or some DRMAA-implemented interface?
 	# Check if command is available, if not then bad
 	run_with_retries "sacct"
@@ -104,7 +112,7 @@ function wait_for_slurm_connect(){
 }
 
 if [[ "${CONNECTION_ATTEMPTS_MAX}" -gt "0" ]]; then
-	echo "---- Checking Airflow MetaDB status ----"
+	log "Checking Airflow MetaDB status"
 	run_with_retries "airflow db check"
 fi
 
@@ -118,28 +126,26 @@ if [[ ${COMMAND} =~ ^(scheduler)$ ]] \
 	check_additional_pip
 
 	if [[ !{CONFIGURED_EXEC} ]]; then
-		echo "---- No Executor configured, using SequentialExecutor ----"
+		log "No Executor configured, using SequentialExecutor"
 		export AIRFLOW___CORE___EXECUTOR="SequentialExecutor"
 
 	elif [[ ${CONFIGURED_EXEC} =~ ^(LocalExecutor|SequentialExecutor)$ ]]; then
 		# Local/Sequential Executor has no additional requirements
-		echo "---- Requested ${CONFIGURED_EXEC}, starting... ----"
+		log "Requested ${CONFIGURED_EXEC}, starting..."
 	elif [[ ! ${SERVICE_COMMAND} ]]; then
 		# All other executors require external services
 		# If a SERVICE_COMMAND is not given, then we cannot
 		# check if the scheduler will be able to run jobs
-		echo -n "FAILED: Requested ${CONFIGURED_EXEC} but SERVICE_COMMAND "
-		echo "not specified!"
-		echo -n "FAILED: Provide a SERVICE_COMMAND so that service available "
-		echo "for scheduler on start!"
+		log_failed "Requested ${CONFIGURED_EXEC} but SERVICE_COMMAND not specified"
+		log_failed "Provide a SERVICE_COMMAND so that service available for scheduler on start "
 		exit 1
 	else
-		echo "---- Requested ${CONFIGURED_EXEC} ----"
-		echo "---- Ensuring service is available with ${SERVICE_COMMAND} ----"
+		log "Requested ${CONFIGURED_EXEC}"
+		log "Ensuring service is available with ${SERVICE_COMMAND}"
 		run_with_retries $SERVICE_COMMAND
 	fi
 
-	echo "---- Starting Scheduler ----"
+	log "Starting Scheduler"
 	start_scheduler
 fi
 
@@ -147,10 +153,10 @@ fi
 if [[ ${COMMAND} =~ ^(webserver)$ ]]; then
 	check_additional_pip
 
-	echo "---- Initializing DB ----"
+	log "Initializing DB"
 	initialize_webserver
 
-	echo "---- Starting Webserver ----"
+	log "Starting Webserver"
 	start_webserver
 fi
 
