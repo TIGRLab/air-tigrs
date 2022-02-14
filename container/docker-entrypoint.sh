@@ -98,16 +98,14 @@ fi
 if [[ ${COMMAND} =~ ^(scheduler)$ ]] \
 	&& [[ "${CONNECTION_ATTEMPTS_MAX}" -gt "0" ]]; then
 
-	# Get executor
 	CONFIGURED_EXEC=$(airflow config get-value core executor)
 	readonly CONFIGURED_EXEC
 
 	check_additional_pip
 
-	if [[ !{CONFIGURED_EXEC} ]]; then
+	if [[ ! ${CONFIGURED_EXEC} ]]; then
 		log "No Executor configured, using SequentialExecutor"
-		export AIRFLOW___CORE___EXECUTOR="SequentialExecutor"
-
+		export AIRFLOW__CORE__EXECUTOR="SequentialExecutor"
 	elif [[ ${CONFIGURED_EXEC} =~ ^(LocalExecutor|SequentialExecutor)$ ]]; then
 		# Local/Sequential Executor has no additional requirements
 		log "Requested ${CONFIGURED_EXEC}, starting..."
