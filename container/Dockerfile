@@ -28,7 +28,7 @@ RUN cd $HOME && \
 	git clone --branch ${DATMAN_BRANCH} ${DATMAN_REPOSITORY} && \
 	cd datman && pip install --user .
 
-ENV PATH="${PATH}:${HOME}/datman/bin"
+ENV PATH="${PATH}:/home/airflow/datman/bin"
 ENV DM_CONFIG=/config/main_config.yml
 ENV DM_SYSTEM=docker
 
