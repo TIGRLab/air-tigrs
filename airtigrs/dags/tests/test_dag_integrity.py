@@ -1,10 +1,12 @@
+"""Test validity of all DAGs."""
+
 from pathlib import Path
 
 import pytest
 from airflow import models as airflow_models
+from airflow.utils.dag_cycle_tester import test_cycle as _test_cycle
 
 DAG_PATHS = Path(__file__).parents[1].glob("*.py")
-print(DAG_PATHS)
 
 
 @pytest.mark.parametrize("dag_path", DAG_PATHS)
@@ -15,13 +17,15 @@ def test_dag_integrity(dag_path):
 
     # Validate if there is at least 1 DAG object in the file
     dag_objects = [
-        var for var in vars(module).values() if isinstance(var, airflow_models.DAG)
+        var
+        for var in vars(module).values()
+        if isinstance(var, airflow_models.DAG)
     ]
     assert dag_objects
 
     # For every DAG object, test for cycles
     for dag in dag_objects:
-        dag.test_cycle()
+        _test_cycle(dag)
 
 
 def _import_file(module_name, module_path):

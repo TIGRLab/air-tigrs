@@ -17,7 +17,7 @@ def build_xnat_ingest_taskgroup(study, config):
     with TaskGroup("xnat_ingest_taskgroup") as xnat_ingest:
 
         for site in config.get_sites():
-            with TaskGroup(group_id="dm_sftp") as dm_sftp:
+            with TaskGroup(group_id=f"dm_sftp_{site}") as dm_sftp:
                 conn_id = f"{study}_{site}_sftp"
                 if conn.conn_id_exists(conn_id):
                     SFTPFetchOperator(

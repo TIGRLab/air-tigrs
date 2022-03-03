@@ -16,6 +16,7 @@ default_args = {
     "retry_delay": timedelta(minutes=10),
 }
 
+
 def create_dag(study, config, default_args):
     """Generates a DAG for a given study."""
 
@@ -25,16 +26,17 @@ def create_dag(study, config, default_args):
         description="Create end-to-end DAG for a given study",
         schedule_interval=timedelta(days=1),
         tags=[study],
-        start_date=days_ago(1)
+        start_date=days_ago(1),
     )
 
     with dag:
-        
-        xnat_ingest = build_xnat_ingest_taskgroup(dag=dag)
+
+        xnat_ingest = build_xnat_ingest_taskgroup(study, config)
 
         xnat_ingest
 
     return dag
+
 
 config = datman.config.config()
 projects = config.get_key("Projects")
