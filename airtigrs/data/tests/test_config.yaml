@@ -13,7 +13,7 @@ SystemSettings:
   test:
     DatmanProjectsDir: "projectsdir/"
     DatmanAssetsDir: "assetsdir/"
-    ConfigDir: "tests/test_datasources_to_xnat/"
+    ConfigDir: "../../data/tests/"
 
 Paths:
   # paths defined here are relative to the study specific folder
